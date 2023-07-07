@@ -1,0 +1,580 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+install.packages("PNSIBGE") 
+library(PNSIBGE)
+```
+Plano Amostral - PNS 2019
+------ 
+```{r}
+# Carregar a PNS de 2019 como um data frame
+df <- get_pns(year=2019, design=FALSE)
+# Exibir as primeiras linhas do data frame, permitindo verificar se os dados foram carregados corretamente
+head(df)
+# Obter um resumo estatístico do data frame
+summary(df)
+```
+
+
+Q084 EM BINARIO
+-----
+```{r}
+#Verificar se cada valor da coluna é igual a "Sim" e, caso seja, atribuir o valor 1 à nova variável coluna_Q084, e 0 caso contrário.
+df$coluna_Q084 <- ifelse(df$Q084 == "Sim", 1, 0)
+#Exibir os nomes das colunas atualizado e verificar se a nova variável foi adicionada corretamente
+colnames(df$coluna_Q084)
+
+#Selecionar apenas as linhas onde possui valor 1, armazenando-as no novo data frame 
+df_filtrado <- subset(df, df$coluna_Q084 == 1)
+df_filtrado <- df_filtrado[df_filtrado$C008 >= 18, ]
+
+#Selecionar apenas as colunas necessárias para a análise e armazená-las em um novo data frame
+df_selection <- df_filtrado[, c( "V0024","UPA_PNS", "V0001", "C008","C009","P00104","P00404", "VDF004", "V0026", "C006", "D001", "D00201", "VDD004A","C011", "B001", "B003","C001", "E001", "I00102","coluna_Q084")]
+
+#Número de linhas 
+nrow(df_selection)
+```
+
+Renomear as colunas 
+------
+```{r}
+#Atribuir novos nomes às colunas do data frame, passando como argumento um vetor de strings com os novos nomes desejados
+colnames(df_selection) = c("V0024", "UPA_PNS", "UF", "Idade", "Raça", "Peso", "Altura", "Renda", "Zona", "Sexo", "Sabe ler", "Frequenta a escola", "Grau de Ensino", "Estado Civil", "Cadastro UBS", "Visita agente comunitario", "N de pessoas no domicilio", "Trabalha", "Plano de Saúde particular", "Dor na coluna")
+```
+
+Falores faltantes ou ausentes (NA)
+------
+```{r}
+df_selection[!complete.cases(df_selection),]
+```
+
+Excluindo valores NA - Peso
+-------
+```{r}
+#Removendo
+df_selection <- df_selection[complete.cases(df_selection$Peso), ]
+df_filtrado <- df_filtrado[complete.cases(df_filtrado$P00104), ]
+#Conferir
+df_selection[!complete.cases(df_selection$Peso),]
+```
+
+Tratando valores NA - Renda
+-----
+```{r}
+#Lista os valores únicos presentes na variável 
+unique(df_selection$Renda)
+summary(df_selection$Renda)
+#Substitui os valores ausentes na variável "" em   Mais de ½ até 1 salário mínimo (moda)
+df_selection[is.na(df_selection$Renda),]$Renda = "Mais de ½ até 1 salário mínimo"
+```
+Tratando valores NA - Visita agente comunitario
+-------
+```{r}
+summary(df_selection$`Visita agente comunitario`)
+unique(df_selection$`Visita agente comunitario`)
+#transformar "" em   Ignorado
+df_selection[is.na(df_selection$`Visita agente comunitario`),]$`Visita agente comunitario` = "Ignorado"
+```
+
+Variável contínua "Idade" em uma variável categórica binária
+--------
+```{r}
+#Atribuir o valor 1 se a idade estiver dentro da faixa etária correspondente e 0 caso contrário
+df_selection$Idade_18_29 <- ifelse(df_selection$Idade >= 18 & df_selection$Idade <= 29, 1, 0)
+df_selection$Idade_30_39 <- ifelse(df_selection$Idade >= 30 & df_selection$Idade <= 39, 1, 0)
+df_selection$Idade_40_49 <- ifelse(df_selection$Idade >= 40 & df_selection$Idade <= 49, 1, 0)
+df_selection$Idade_50_59 <- ifelse(df_selection$Idade >= 50 & df_selection$Idade <= 59, 1, 0)
+df_selection$Idade_60_69 <- ifelse(df_selection$Idade >= 60 & df_selection$Idade <= 69, 1, 0)
+df_selection$Idade_70_79 <- ifelse(df_selection$Idade >= 70 & df_selection$Idade <= 79, 1, 0)
+df_selection$Idade_80_89 <- ifelse(df_selection$Idade >= 80 & df_selection$Idade <= 89, 1, 0)
+df_selection$Idade_90_99 <- ifelse(df_selection$Idade >= 90 & df_selection$Idade <= 99, 1, 0)
+df_selection$Idade_100_104 <- ifelse(df_selection$Idade >= 100 & df_selection$Idade <= 104, 1, 0)
+```
+Variável contínua "Raça" em uma variável categórica
+--------
+```{r}
+df_selection$Raça_1 <- ifelse(df_selection$Raça == "Branca", 1, 0)
+df_selection$Raça_2 <- ifelse(df_selection$Raça == "Amarela", 1, 0)
+df_selection$Raça_3 <- ifelse(df_selection$Raça == "Preta", 1, 0)
+df_selection$Raça_4 <- ifelse(df_selection$Raça == "Parda", 1, 0)
+df_selection$Raça_5 <- ifelse(df_selection$Raça == "Indígena", 1, 0)
+df_selection$Raça <- NULL
+```
+
+Variável contínua "Peso" em uma variável categórica
+--------
+```{r}
+# Criar a variável binária para 5 intervalos 
+df_selection$Peso_30_56<- ifelse(df_selection$Peso >= 30 & df_selection$Peso <= 56, 1,0)
+df_selection$Peso_57_82<- ifelse(df_selection$Peso >= 57 & df_selection$Peso <= 82, 1,0)
+df_selection$Peso_83_108<- ifelse(df_selection$Peso >= 83 & df_selection$Peso <= 108, 1,0)
+df_selection$Peso_109_134<- ifelse(df_selection$Peso >= 109 & df_selection$Peso <= 134, 1,0)
+df_selection$Peso_135_160<- ifelse(df_selection$Peso >= 135 & df_selection$Peso <= 160, 1,0)
+```
+
+Variável contínua "Altura" em uma variável categórica
+--------
+```{r}
+# Criar a variável binária para 5 intervalos
+df_selection$Altura_129_142<- ifelse(df_selection$Altura >= 129 & df_selection$Altura <= 142, 1,0)
+df_selection$Altura_143_156<- ifelse(df_selection$Altura >= 143 & df_selection$Altura <= 156, 1,0)
+df_selection$Altura_157_170<- ifelse(df_selection$Altura >= 157 & df_selection$Altura <= 170, 1,0)
+df_selection$Altura_171_184<- ifelse(df_selection$Altura >= 171 & df_selection$Altura <= 184, 1,0)
+df_selection$Altura_185_199<- ifelse(df_selection$Altura >= 185 & df_selection$Altura <= 199, 1,0)
+```
+
+Variável contínua "IMC" em uma variável categórica 
+------
+```{r}
+df_selection$IMC <- df_selection$Peso / ((df_selection$Altura/100)^2)
+#Atribuir o valor 1 se a estiver dentro da faixa correspondente e 0 caso contrário
+df_selection$Baixo_Peso <- ifelse(df_selection$IMC < 18.5, 1, 0)
+df_selection$Peso_Normal <- ifelse(df_selection$IMC >= 18.5 & df_selection$IMC <= 24.9, 1, 0)
+df_selection$Sobrepeso <- ifelse(df_selection$IMC >= 25 & df_selection$IMC <= 29.9, 1, 0)
+df_selection$Obesidade_I <- ifelse(df_selection$IMC >= 30 & df_selection$IMC <= 34.9, 1, 0)
+df_selection$Obesidade_II<- ifelse(df_selection$IMC >= 35 & df_selection$IMC <= 39.9, 1, 0)
+df_selection$Obesidade_III <- ifelse(df_selection$IMC >= 40, 1, 0)
+df_selection$IMC <- NULL
+df_selection$Altura <- NULL
+df_selection$Peso <- NULL
+df_selection$Idade <- NULL
+```
+Variável contínua "Renda" em um PerCapita categórico
+--------
+```{r}
+df_selection$PerCapita_1  <- ifelse(df_selection$Renda == "Até ¼ salário mínimo", 1, 0)
+df_selection$PerCapita_2 <- ifelse (df_selection$Renda == "Mais de ¼ até ½ salário mínimo", 1, 0)
+df_selection$PerCapita_3 <- ifelse(df_selection$Renda == "Mais de ½ até 1 salário mínimo", 1, 0)
+df_selection$PerCapita_4 <- ifelse(df_selection$Renda == "Mais de 1 até 2 salários mínimos: R$ 998,01 até R$ 1996,00", 1, 0)
+df_selection$PerCapita_5 <- ifelse (df_selection$Renda == "Mais de 2 até 3 salários mínimos", 1, 0)
+df_selection$PerCapita_6 <- ifelse (df_selection$Renda == "Mais de 3 até 5 salários mínimos", 1, 0)
+df_selection$PerCapita_7 <- ifelse (df_selection$Renda == "Mais de 5 salários mínimos", 1, 0)
+
+df_selection$Renda <- NULL
+```
+Variável contínua "Zona" em uma variável categórica binária
+--------
+```{r}
+#Atribuir o valor 1 se estiver dentro da zona correspondente e 0 caso contrário
+df_selection$Urbano  <- ifelse(df_selection$Zona == "Urbano", 1, 0)
+df_selection$Rural  <- ifelse(df_selection$Zona == "Rural", 1, 0)
+df_selection$Zona <- NULL
+```
+Variável contínua "Sexo" em uma variável categórica binária
+--------
+```{r}
+#Atribuir o valor 1 se estiver dentro da zona correspondente e 0 caso contrário em novas colunas
+df_selection$Homem  <- ifelse(df_selection$Sexo == "Homem", 1, 0)
+df_selection$Mulher  <- ifelse(df_selection$Sexo == "Mulher", 1, 0)
+df_selection$Sexo <- NULL
+```
+Variável contínua "Sabe ler" em uma variável categórica binária
+--------
+```{r}
+#Atribuir o valor 1 se sim correspondente e 0 caso contrário em novas colunas
+df_selection$`Sabe ler`  <- ifelse(df_selection$`Sabe ler` == "Sim", 1, 0)
+```
+
+Variável contínua "Frequenta a escola" em uma variável categórica binária
+--------
+```{r}
+#Atribuir o valor 1 se sim correspondente e 0 caso contrário em novas colunas
+df_selection$`Frequenta a escola`<- ifelse(df_selection$`Frequenta a escola` == "Sim", 1, 0)
+```
+Variável contínua "Grau de Ensino" em uma variável categórica binária
+--------
+```{r}
+#Atribuir o valor 1 se a idade estiver dentro da faixa etária correspondente e 0 caso contrário
+df_selection$EF_Incompleto <- ifelse(df_selection$`Grau de Ensino` == "Fundamental incompleto ou equivalente", 1, 0)
+df_selection$SP_Incompleto <- ifelse(df_selection$`Grau de Ensino` == "Superior incompleto ou equivalente", 1, 0)
+df_selection$EM_Incompleto <- ifelse(df_selection$`Grau de Ensino` == "Médio incompleto ou equivalente", 1, 0)
+df_selection$EF_Completo <- ifelse(df_selection$`Grau de Ensino` == "Fundamental completo ou equivalente", 1, 0)
+df_selection$SP_Completo <- ifelse(df_selection$`Grau de Ensino` == "Superior completo", 1, 0)
+df_selection$EM_Completo <- ifelse(df_selection$`Grau de Ensino` == "Médio completo ou equivalente", 1, 0)
+df_selection$Sem_Instrução <- ifelse(df_selection$`Grau de Ensino` == "Sem instrução", 1, 0)
+df_selection$`Grau de Ensino` <- NULL
+```
+
+Variável contínua "Estado Civil" em uma variável categórica binária
+--------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$Casado <- ifelse(df_selection$`Estado Civil` == "Casado(a)", 1, 0)
+df_selection$Solteiro <- ifelse(df_selection$`Estado Civil` == "Solteiro(a) ", 1, 0)
+df_selection$Viúvo <- ifelse(df_selection$`Estado Civil` == "Viúvo(a)", 1, 0)
+df_selection$Divorciado <- ifelse(df_selection$`Estado Civil` == "Divorciado(a) ou desquitado(a) ou separado(a) judicialmente", 1, 0)
+df_selection$`Estado Civil` <- NULL
+```
+Variável contínua "Cadastro UBS" em uma variável categórica binária
+--------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$`Cadastro UBS` <- ifelse(df_selection$`Cadastro UBS` == "Sim", 1, 0)
+```
+Variável contínua "Visita Agente Comunitaria" em uma variável categórica binária
+--------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$`Visita agente comunitario` <- ifelse(df_selection$`Visita agente comunitario` == "Uma vez" | df_selection$`Visita agente comunitario` == "Mensalmente" | df_selection$`Visita agente comunitario` == "De 2 a 4 vezes" | df_selection$`Visita agente comunitario` == "A cada 2 meses", 1, 0)
+```
+Variável contínua "Trabalha" em uma variável categórica binária
+--------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$Trabalha <- ifelse(df_selection$Trabalha == "Sim", 1, 0)
+```
+Variável contínua "Plano de saúde particular" em uma variável categórica binária
+--------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$`Plano de Saúde particular` <- ifelse(df_selection$`Plano de Saúde particular` == "Sim", 1, 0)
+```
+Variável contínua "UF" em uma variável categórica binária "Região"
+--------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$Região_Norte <- ifelse(df_selection$UF == "Roraima", 1, 
+                            ifelse(df_selection$UF == "Amapá", 1,
+                            ifelse(df_selection$UF == "Amazonas", 1, 
+                            ifelse(df_selection$UF == "Pará", 1, 
+                            ifelse(df_selection$UF == "Acre", 1, 
+                            ifelse(df_selection$UF == "Rondônia", 1, 0)))))) 
+
+df_selection$Região_Nordeste <- ifelse(df_selection$UF == "Maranhão", 1,
+                                ifelse(df_selection$UF == "Piauí", 1,  
+                                ifelse(df_selection$UF == "Ceará", 1, 
+                                ifelse(df_selection$UF == "Rio Grande do Norte", 1, 
+                                ifelse(df_selection$UF == "Paraíba", 1, 
+                                ifelse(df_selection$UF == "Pernambuco", 1, 
+                                ifelse(df_selection$UF == "Alagoas", 1, 
+                                ifelse(df_selection$UF == "Sergipe", 1, 
+                                ifelse(df_selection$UF == "Bahia", 1, 0)))))))))
+
+df_selection$Região_Centro_Oeste <- ifelse(df_selection$UF == "Goiás", 1, 
+                                    ifelse(df_selection$UF == "Mato Grosso", 1,
+                                    ifelse(df_selection$UF == "Mato Grosso do Sul", 1,
+                                    ifelse(df_selection$UF == "Distrito Federal", 1, 0))))
+
+df_selection$Região_Sudeste <- ifelse(df_selection$UF == "São Paulo", 1,
+                               ifelse(df_selection$UF == "Rio de Janeiro", 1,
+                               ifelse(df_selection$UF == "Minas Gerais", 1,
+                               ifelse(df_selection$UF == "Espírito Santo", 1, 0))))
+
+df_selection$Região_Sul <- ifelse(df_selection$UF == "Paraná", 1,
+                           ifelse(df_selection$UF == "Santa Catarina", 1,
+                           ifelse(df_selection$UF == "Rio Grande do Sul", 1, 0)))
+
+#Conferir colunas e dados
+colnames(df_selection)
+```
+Adicionando novas variaveis em DF
+------
+```{r}
+#Adicionando
+df_selection <- cbind(df_selection, df_filtrado[, c("J037", "J014", "J001", "P03201", "P050", "Q00201", "Q03001","Q060", "Q06306", "Q068", "Q074", "Q079", "Q088", "Q092","Q11006", "Q11604", "Q120", "Q124", "Q085", "Q08607", "Q08608", "Q08609", "Q08610", "Q08611", "Q087", "P027", "Q03002", "Q00202", "Q05901")])
+#Alterando o nome 
+names(df_selection)[names(df_selection) == "J037"] <- "Internado nos ultimos 12 meses"
+names(df_selection)[names(df_selection) == "J014"] <- "Procurou algum serviço de saúde para atendimento"
+names(df_selection)[names(df_selection) == "J001"] <- "Estado de Saúde"
+names(df_selection)[names(df_selection) == "P03201"] <- "Ingeriu Álcool (5 doses)"
+names(df_selection)[names(df_selection) == "P050"] <- "Uso de Tabaco"
+names(df_selection)[names(df_selection) == "Q00201"] <- "Hipertensão"
+names(df_selection)[names(df_selection) == "Q03001"] <- "Diabetes"
+names(df_selection)[names(df_selection) == "Q060"] <- "Colesterol Alto"
+names(df_selection)[names(df_selection) == "Q06306"] <- "Cardiopatia"
+names(df_selection)[names(df_selection) == "Q068"] <- "AVC ou derrame"
+names(df_selection)[names(df_selection) == "Q074"] <- "Asma"
+names(df_selection)[names(df_selection) == "Q079"] <- "Artrite ou reumatismo"
+names(df_selection)[names(df_selection) == "Q088"] <- "DORT"
+names(df_selection)[names(df_selection) == "Q092"] <- "Depressão"
+names(df_selection)[names(df_selection) == "Q11006"] <- "Doença Mental"
+names(df_selection)[names(df_selection) == "Q11604"] <- "Doença crônica no pulmão"
+names(df_selection)[names(df_selection) == "Q120"] <- "Câncer"
+names(df_selection)[names(df_selection) == "Q124"] <- "Insuficiência renal crônica"
+names(df_selection)[names(df_selection) == "Q085"] <- "Idade do início de dor na coluna"
+names(df_selection)[names(df_selection) == "Q08607"] <- "Exercício físico para dor na coluna"
+names(df_selection)[names(df_selection) == "Q08608"] <- "Fisioterapia para dor na coluna"
+names(df_selection)[names(df_selection) == "Q08609"] <- "Medicamento para dor na coluna"
+names(df_selection)[names(df_selection) == "Q08610"] <- "Prática integrativa para dor na coluna"
+names(df_selection)[names(df_selection) == "Q08611"] <- "Acompanhamento para dor na coluna"
+names(df_selection)[names(df_selection) == "Q087"] <- "Dor na coluna limita atividades"
+names(df_selection)[names(df_selection) == "Q05901"] <- "Mediu colesterol"
+```
+
+Tratando valores NA - Ingeriu Álcool (5 doses)
+-------
+```{r}
+names(df_selection)[names(df_selection) == "P027"] <- "Ingeri álcool"
+#Resumo estatístico 
+summary(df_selection$`Ingeriu Álcool (5 doses)`)
+df_selection$`Ingeriu Álcool (5 doses)`[df_selection$`Ingeri álcool` == "Não bebo nunca"] <- "Não"
+df_selection$`Ingeriu Álcool (5 doses)`[df_selection$`Ingeri álcool` == "Menos de uma vez por mês"] <- "Não"
+df_selection$`Ingeriu Álcool (5 doses)`[df_selection$`Ingeri álcool` == "Uma vez ou mais por mês"] <- "Sim"
+```
+Tratando valores NA - Diabetes
+-------
+```{r}
+names(df_selection)[names(df_selection) == "Q03002"] <- "Diabetes durante a gestação"
+#Resumo estatístico 
+table(df_selection$`Diabetes durante a gestação`)
+summary(df_selection$Diabetes)
+df_selection$Diabetes[df_selection$`Diabetes durante a gestação` == "Sim"] <- "Não" 
+#Atribui os valores ausentes para ignorado
+df_selection[is.na(df_selection$Diabetes),]$Diabetes = "Ignorado"
+```
+
+Tratando valores NA - Colesterol Alto
+-------
+```{r}
+#Resumo estatístico 
+df_selection$`Colesterol Alto`[df_selection$`Mediu colesterol` == "Nunca fez"] <- "Não"
+summary(df_selection$`Colesterol Alto`)
+```
+Tratando valores NA - Hipertensão
+-------
+```{r}
+names(df_selection)[names(df_selection) == "Q00202"] <- "Hipertensão durante a gestação"
+df_selection$Hipertensão[df_selection$`Hipertensão durante a gestação`== "Sim"] <- "Não"
+#Resumo estatístico 
+summary(df_selection$Hipertensão)
+#Atribui os valores ausentes para ignorado
+df_selection[is.na(df_selection$Hipertensão),]$Hipertensão = "Ignorado"
+#Conferir
+print(df_selection[!complete.cases(df_selection$Hipertensão),])
+```
+Variável contínua "Estado de Saúde" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$Saude_Regular <- ifelse(df_selection$`Estado de Saúde` == "Regular", 1, 0)
+df_selection$Saude_Muito_Ruim <- ifelse(df_selection$`Estado de Saúde` == "Muito ruim", 1, 0)
+df_selection$Saude_Bom <- ifelse(df_selection$`Estado de Saúde` == "Bom", 1, 0)
+df_selection$Saude_Muito_Bom <- ifelse(df_selection$`Estado de Saúde` == "Muito bom", 1, 0)
+df_selection$Saude_Ruim <- ifelse(df_selection$`Estado de Saúde` == "Ruim", 1, 0)
+
+```
+Variável contínua "Internado" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$Internado <- ifelse(df_selection$Internado == "Sim", 1, 0)
+```
+Variável contínua "Ingeriu Álcool (5 doses)" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$`Ingeriu Álcool (5 doses)`<- ifelse(df_selection$`Ingeriu Álcool (5 doses)` == "Sim", 1, 0)
+df_selection$`Ingeri álcool` <- NULL
+```
+Variável contínua "Uso de Tabaco" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$`Uso de Tabaco` <- ifelse(df_selection$`Uso de Tabaco` == "Sim, diariamente" | df_selection$`Uso de Tabaco` == "Sim, menos que diariamente", 1, 0)
+```
+Variável contínua "Hipertensão" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$Hipertensão <- ifelse(df_selection$Hipertensão == "Sim", 1, 0)
+```
+Variável contínua "Diabetes" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$Diabetes <- ifelse(df_selection$Diabetes == "Sim", 1, 0)
+df_selection$`Diabetes durante a gestação` <- NULL
+df_selection$`Hipertensão durante a gestação` <- NULL
+
+```
+Variável contínua "Colesterol Alto" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$`Colesterol Alto`<- ifelse(df_selection$`Colesterol Alto` == "Sim", 1, 0)
+df_selection$`Mediu colesterol` <- NULL
+```
+Variável contínua "Cadiopatia" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$Cardiopatia <- ifelse(df_selection$Cardiopatia == "Sim", 1, 0)
+```
+Variável contínua "AVC ou derrame" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$`AVC ou derrame`<- ifelse(df_selection$`AVC ou derrame` == "Sim", 1, 0)
+```
+Variável contínua "Asma" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$Asma<- ifelse(df_selection$Asma == "Sim", 1, 0)
+```
+Variável contínua "Artrite ou reumatismo" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$`Artrite ou reumatismo`<- ifelse(df_selection$`Artrite ou reumatismo` == "Sim", 1, 0)
+```
+Variável contínua "DORT" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$DORT<- ifelse(df_selection$DORT == "Sim", 1, 0)
+```
+Variável contínua "Depressão" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$Depressão <- ifelse(df_selection$Depressão == "Sim", 1, 0)
+```
+Variável contínua "Doença mental" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$`Doença Mental`<- ifelse(df_selection$`Doença Mental`== "Sim", 1, 0)
+```
+Variável contínua "Doença crônica no pulmão" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$`Doença crônica no pulmão`<- ifelse(df_selection$`Doença crônica no pulmão` == "Sim", 1, 0)
+```
+Variável contínua "Câncer" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$Câncer<- ifelse(df_selection$Câncer== "Sim", 1, 0)
+```
+Variável contínua "Insuficiência renal crônica" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$`Insuficiência renal crônica`<- ifelse(df_selection$`Insuficiência renal crônica` == "Sim", 1, 0)
+```
+Variável contínua "Exercício físico para dor na coluna" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$`Exercício físico para dor na coluna`<- ifelse(df_selection$`Exercício físico para dor na coluna` == "Sim", 1, 0)
+```
+Variável contínua "Fisioterapia para dor na coluna" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$`Fisioterapia para dor na coluna` <- ifelse(df_selection$`Fisioterapia para dor na coluna` == "Sim", 1, 0)
+```
+Variável contínua "Medicamento para dor na coluna" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$`Medicamento para dor na coluna` <- ifelse(df_selection$`Medicamento para dor na coluna`== "Sim", 1, 0)
+```
+Variável contínua "Prática integrativa para dor na coluna" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$`Prática integrativa para dor na coluna` <- ifelse(df_selection$`Prática integrativa para dor na coluna` == "Sim", 1, 0)
+```
+Variável contínua "Acompanhamento para dor na coluna" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$`Acompanhamento para dor na coluna` <- ifelse(df_selection$`Acompanhamento para dor na coluna` == "Sim", 1, 0)
+```
+Variável contínua "Dor na coluna limita atividades" em uma variável categórica binária
+-------
+```{r}
+#Atribuir o valor 1 estiver dentro da variavel correspondente e 0 caso contrário
+df_selection$Não_limita <- ifelse(df_selection$`Dor na coluna limita atividades` == "Não limita", 1, 0)
+df_selection$Limita_pouco <- ifelse(df_selection$`Dor na coluna limita atividades` == "Um pouco", 1, 0)
+df_selection$Limita_moderadamente <- ifelse(df_selection$`Dor na coluna limita atividades` == "Moderadamente", 1, 0)
+df_selection$Limita_intensamente <- ifelse(df_selection$`Dor na coluna limita atividades` == "Intensamente", 1, 0)
+df_selection$Limita_muito_intensamente <- ifelse(df_selection$`Dor na coluna limita atividades` == "Muito intensamente", 1, 0)
+```
+Variável contínua "Idade inicio" em uma variável categórica binária
+--------
+```{r}
+#Atribuir o valor 1 se a idade estiver dentro da faixa etária correspondente e 0 caso contrário
+df_selection$Inicio_18_29 <- ifelse(df_selection$`Idade do início de dor na coluna` >= 18 & df_selection$`Idade do início de dor na coluna` <= 29, 1, 0)
+df_selection$Inicio_30_39 <- ifelse(df_selection$`Idade do início de dor na coluna` >= 30 & df_selection$`Idade do início de dor na coluna` <= 39, 1, 0)
+df_selection$Inicio_40_49 <- ifelse(df_selection$`Idade do início de dor na coluna` >= 40 & df_selection$`Idade do início de dor na coluna` <= 49, 1, 0)
+df_selection$Inicio_50_59 <- ifelse(df_selection$`Idade do início de dor na coluna` >= 50 & df_selection$`Idade do início de dor na coluna` <= 59, 1, 0)
+df_selection$Inicio_60_69 <- ifelse(df_selection$`Idade do início de dor na coluna` >= 60 & df_selection$`Idade do início de dor na coluna` <= 69, 1, 0)
+df_selection$Inicio_70_79 <- ifelse(df_selection$`Idade do início de dor na coluna` >= 70 & df_selection$`Idade do início de dor na coluna` <= 79, 1, 0)
+df_selection$Inicio_80_89 <- ifelse(df_selection$`Idade do início de dor na coluna` >= 80 & df_selection$`Idade do início de dor na coluna` <= 89, 1, 0)
+df_selection$Inicio_90_99 <- ifelse(df_selection$`Idade do início de dor na coluna` >= 90 & df_selection$`Idade do início de dor na coluna` <= 99, 1, 0)
+```
+Dados
+------
+```{r}
+# Adicionando colunas para os grupos de doenças na df_selection
+df_selection$GrupoCardiovascular <- ifelse(df_selection$Hipertensão == 1 |
+                                            df_selection$Cardiopatia == 1 |
+                                            df_selection$`AVC ou derrame`== 1, 1, 0)
+
+df_selection$GrupoMetabolico <- ifelse(df_selection$Diabetes == 1, 1, 0)
+
+df_selection$GrupoRespiratorio <- ifelse(df_selection$Asma == 1, 1, 0)
+
+df_selection$GrupoArtrite <- ifelse(df_selection$`Artrite ou reumatismo` == 1, 1, 0)
+
+df_selection$GrupoDORT <- ifelse (df_selection$DORT == 1, 1, 0)
+
+df_selection$GrupoMental <- ifelse(df_selection$`Doença Mental` == 1, 1, 0)
+
+df_selection$GrupoDepressao <- ifelse(df_selection$Depressão == 1, 1, 0)
+
+df_selection$GrupoPulmonar <- ifelse(df_selection$`Doença crônica no pulmão` == 1, 1, 0)
+
+df_selection$GrupoRenal <- ifelse(df_selection$`Insuficiência renal crônica` == 1, 1, 0)
+
+df_selection$GrupoOncologico <- ifelse(df_selection$Câncer == 1, 1, 0)
+```
+
+Peso amostral
+---------
+```{r}
+install.packages("survey")
+library(survey) 
+
+df_selection <- cbind(df_selection, df_filtrado[, c("V0006_PNS", "C00301", "V0001")])
+
+# Converter coluna para o tipo numérico
+df_selection$V0001 <- as.numeric(df_selection$V0001)
+df_selection$V0024 <- as.numeric(df_selection$V0024)
+df_selection$UPA_PNS <- as.numeric(df_selection$UPA_PNS)
+df_selection$V0006_PNS <- as.numeric(df_selection$V0006_PNS)
+df_selection$C00301 <- as.numeric(df_selection$C00301)
+
+df_selection$peso_amostral <- 1 / rowSums(df_selection[, c("V0001", "V0024", "UPA_PNS", "V0006_PNS", "C00301")])
+
+# Defina o delineamento amostral
+design <- svydesign(ids = ~1, weights = ~peso_amostral, data = df_selection)
+
+# Realize as análises ponderadas
+mean_combined <- svymean(~UF + V0024 + UPA_PNS + V0006_PNS + C00301, design)
+
+```
+Outro
+```{r}
+
+# Selecione apenas as colunas numéricas
+df_categorico <- df_selection[, sapply(df_selection, is.numeric)]
+df_categorico$V0001 <- NULL
+df_categorico$V0024 <- NULL
+df_categorico$UPA_PNS <- NULL
+df_categorico$V0006_PNS <- NULL
+df_categorico$C00301 <- NULL
+df_categorico$`Idade do início de dor na coluna` <- NULL
+df_categorico$`N de pessoas no domicilio` <- NULL
+
+
+library(openxlsx)
+write.xlsx(df_categorico, "df_categorico.xlsx")
+
+```
